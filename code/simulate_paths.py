@@ -46,32 +46,6 @@ sigma_h_hy = 0.05
 S0_hy = lambda t: np.exp(-a_h_hy * t - (b_h_hy / c_h_hy) * (1.0 - np.exp(-c_h_hy * t)))
 survivalProbsHY = S0_hy(ti)
 
-# Discount curve parameters
-a_r = 0.02
-b_r = 0.02
-c_r = 0.35
-
-D0 = lambda t: np.exp(-a_r * t - (b_r / c_r) * (1.0 - np.exp(-c_r * t)))
-DiscountFactors = D0(ti)
-
-# Investment Grade parameters
-a_h_ig = 0.015
-b_h_ig = -0.012
-c_h_ig = 0.3
-sigma_h_ig = 0.025
-
-S0_ig = lambda t: np.exp(-a_h_ig * t - (b_h_ig / c_h_ig) * (1.0 - np.exp(-c_h_ig * t)))
-survivalProbsIG = S0_ig(ti)
-
-# High Yield parameters
-a_h_hy = 0.03
-b_h_hy = -0.02
-c_h_hy = 0.4
-sigma_h_hy = 0.05
-
-S0_hy = lambda t: np.exp(-a_h_hy * t - (b_h_hy / c_h_hy) * (1.0 - np.exp(-c_h_hy * t)))
-survivalProbsHY = S0_hy(ti)
-
 # Initial Survival Probability Curve and Forward Hazard Curve
 ForwardHazardsIG = -np.log(survivalProbsIG[1:] / survivalProbsIG[:-1]) / deltat
 ForwardHazardsHY = -np.log(survivalProbsHY[1:] / survivalProbsHY[:-1]) / deltat
