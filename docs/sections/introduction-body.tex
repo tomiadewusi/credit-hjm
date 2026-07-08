@@ -1,3 +1,7 @@
 \section{Introduction}
 
-This introduction outlines the project goals, constraints, and contribution. The project is a tutorial on Monte Carlo variance reduction with credit as an application domain. It motivates why stochastic hazards and exotic features push us to simulation, and it previews the toolkit and results.
+This report develops a numerical implementation for pricing credit-linked notes under stochastic hazard-rate dynamics. The central objective is to connect reduced-form credit modelling, HJM-style forward hazard evolution, and Monte Carlo variance reduction in a single reproducible research prototype.
+
+The model begins with deterministic short-rate and hazard-rate term structures for investment grade and high yield reference names. These curves define discount factors, survival probabilities, and initial forward hazard rates. A discrete HJM-style hazard model then evolves the forward hazard surface path by path while preserving the input survival curve in expectation. Pathwise survival weighting is used throughout, avoiding explicit default-time simulation and producing smoother Monte Carlo estimators for structured credit payoffs.
+
+The main test instrument is a range-accrual credit-linked note whose redemption depends on the proportion of observation dates for which the model-implied CDS spread remains inside a specified corridor. This payoff introduces controlled path dependence while retaining the standard CLN decomposition into coupon, recovery, and redemption components. The numerical experiments compare baseline Monte Carlo estimates with antithetic variates and control variates to evaluate how standard variance reduction methods perform in this structured credit setting.
