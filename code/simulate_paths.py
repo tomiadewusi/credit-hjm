@@ -49,6 +49,7 @@ survivalProbsHY = S0_hy(ti)
 # Initial Survival Probability Curve and Forward Hazard Curve
 ForwardHazardsIG = -np.log(survivalProbsIG[1:] / survivalProbsIG[:-1]) / deltat
 ForwardHazardsHY = -np.log(survivalProbsHY[1:] / survivalProbsHY[:-1]) / deltat
+NUM_HAZARD_STEPS = len(ForwardHazardsHY)
 
 
 def vanilla_cln_analytical(S0_function, D0_function, ti, Notional, couponRate, RecoveryRate):
@@ -86,32 +87,35 @@ def simulatePaths(normalVariates, useRangeAccrual):
     Parameters
     ----------
     normalVariates : ndarray
-        Standard normal shocks with shape ``(n_paths, M)``, where ``M`` is the
-        number of semiannual forward-hazard intervals.
+        Standard normal shocks with shape ``(n_paths, NUM_HAZARD_STEPS)``.
+        The current semiannual three-year grid has six hazard intervals.
     useRangeAccrual : bool
         If True, scale redemption by the fraction of periods in which the
         implied credit spread lies inside the range-accrual band. If False,
         value the vanilla CLN payoff under the same simulated hazard dynamics.
     """
-    n,_ = normalVariates.shape
+    n_paths, n_steps = normalVariates.shape
+    if n_steps != NUM_HAZARD_STEPS:
+        raise ValueError(
+            "normalVariates must have shape (n_paths, "
+            f"{NUM_HAZARD_STEPS}); got {normalVariates.shape}"
+        )
 
     # Range-accrual spread band, expressed in decimal spread units.
     upperBarrier = 150 / 10_000
     lowerBarrier = 0.0
 
-    # Number of semiannual hazard intervals on the simulation grid. With the
-    # current 0y-to-3y semiannual grid this is six.
-    M = len(ForwardHazardsHY)
+    M = NUM_HAZARD_STEPS
 
     sigma_hat_ig = lambda t1, t2: sigma_h_ig * np.exp(-c_h_ig * (t2 - t1))
     sigma_hat_hy = lambda t1, t2: sigma_h_hy * np.exp(-c_h_hy * (t2 - t1))
 
     # Pathwise PV arrays
-    PV_paths_IG = np.zeros(n)
-    PV_paths_HY = np.zeros(n)
+    PV_paths_IG = np.zeros(n_paths)
+    PV_paths_HY = np.zeros(n_paths)
 
     # Monte Carlo (pathwise and memory-safe)
-    for sim in range(n):
+    for sim in range(n_paths):
 
         # Clone the forward curves
         FWD_IG = ForwardHazardsIG + 0
