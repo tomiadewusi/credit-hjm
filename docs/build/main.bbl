@@ -1,0 +1,53 @@
+\begin{thebibliography}{9}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Bielecki and Rutkowski(2002)]{bieleckiRutkowski2002}
+Tomasz~R. Bielecki and Marek Rutkowski.
+\newblock \emph{Credit Risk: Modeling, Valuation and Hedging}.
+\newblock Springer, 2002.
+
+\bibitem[Brigo and Mercurio(2006)]{brigoMercurio2006}
+Damiano Brigo and Fabio Mercurio.
+\newblock \emph{Interest Rate Models: Theory and Practice}.
+\newblock Springer, 2 edition, 2006.
+
+\bibitem[Duffie and Singleton(2003)]{duffieSingleton2003}
+Darrell Duffie and Kenneth~J. Singleton.
+\newblock \emph{Credit Risk: Pricing, Measurement, and Management}.
+\newblock Princeton University Press, 2003.
+
+\bibitem[Glasserman(2004)]{glasserman2004}
+Paul Glasserman.
+\newblock \emph{Monte Carlo Methods in Financial Engineering}.
+\newblock Springer Finance. Springer, 2004.
+
+\bibitem[Lando(2004)]{lando2004}
+David Lando.
+\newblock \emph{Credit Risk Modeling: Theory and Applications}.
+\newblock Princeton University Press, 2004.
+
+\bibitem[Law(2015)]{lawKelton2015}
+Averill~M. Law.
+\newblock \emph{Simulation Modeling and Analysis}.
+\newblock McGraw-Hill Education, 5 edition, 2015.
+
+\bibitem[Matsumoto and Nishimura(1998)]{matsumoto1998}
+Makoto Matsumoto and Takuji Nishimura.
+\newblock Mersenne twister: A 623-dimensionally equidistributed uniform pseudo-random number generator.
+\newblock \emph{ACM Transactions on Modeling and Computer Simulation}, 8\penalty0 (1):\penalty0 3--30, 1998.
+
+\bibitem[O'Kane and Turnbull(2003)]{okaneTurnbull2003}
+Dominic O'Kane and Stuart Turnbull.
+\newblock Valuation of credit default swaps.
+\newblock Technical report, Lehman Brothers, Quantitative Credit Research, 2003.
+
+\bibitem[Sch{\"o}nbucher(2003)]{schonbucher2003}
+Philipp~J. Sch{\"o}nbucher.
+\newblock \emph{Credit Derivatives Pricing Models: Models, Pricing and Implementation}.
+\newblock John Wiley \& Sons, 2003.
+
+\end{thebibliography}

@@ -1,0 +1,67 @@
+\section{Literature Review}
+
+\subsection{Scope, Motivation, and Related Literature}
+
+Monte Carlo simulation is a central tool in computational finance and applied probability, particularly when analytical valuation becomes infeasible due to stochastic hazards or exotic payoff features. In credit derivatives, closed-form pricing breaks down once the hazard rate becomes stochastic or when coupons and redemptions depend on default outcomes. In such settings, Monte Carlo estimation provides a flexible numerical approach capable of handling discontinuities and complex path dependence. The challenge is not only to obtain unbiased estimators of expected payoffs but to do so efficiently by minimising variance for a fixed computational budget.
+
+The methodological foundation of this project lies in the simulation and variance-reduction literature. \citet{lawKelton2015} provides the canonical reference on discrete-event and Monte Carlo simulation methodology, including estimator design, random-number generation, and efficiency-improvement techniques. \citet{glasserman2004} extends these ideas to financial engineering, offering rigorous treatments of convergence diagnostics, variance-reduction algorithms, and pathwise derivative estimation. Together they form the theoretical and algorithmic backbone of this work. 
+
+The application context for this project draws on reduced-form credit modelling, where default is represented as a stochastic event governed by a hazard-rate process. \citet{schonbucher2003} presents a practitioner-oriented synthesis of intensity-based credit models and simulation approaches for credit derivatives, while \citet{okaneTurnbull2003} outlines the market conventions and bootstrapping techniques used to construct hazard curves and value credit default swaps (CDS). These texts provide the minimal domain knowledge required to translate generic Monte Carlo concepts into a credit-specific test case.
+
+Beyond these four core references, broader treatments of credit risk appear in \citet{duffieSingleton2003}, \citet{lando2004}, and \citet{bieleckiRutkowski2002}, each formalising the mathematical foundations of intensity-based and structural models. \citet{brigoMercurio2006} complements these works by detailing interest-rate modelling and discounting frameworks relevant to credit-linked products. These additional sources are referenced for completeness but remain outside the primary simulation and variance-reduction focus of this project.
+
+\subsection{Pseudo-Random Number Generation}
+
+Monte Carlo methods depend on streams of pseudo-random numbers that emulate independent samples from the uniform distribution on $(0,1)$. Modern simulation packages typically use the Mersenne Twister algorithm \citep{matsumoto1998}, a 623-dimensionally equidistributed generator with an extremely long period of $2^{19937}-1$. NumPy, used in this project, adopts this generator by default. Each simulation uses an explicit seed to guarantee reproducibility, ensuring that all results are replicable. Because the Mersenne Twister already meets the quality criteria recommended by \citet{lawKelton2015}, no alternative generator is explored. The focus remains on how random draws are exploited within variance-reduction frameworks rather than on the mechanics of the generator itself.
+
+\subsection{Monte Carlo Estimation and Error Analysis}
+
+The standard Monte Carlo estimator for an expected value $\mu = \mathbb{E}[f(X)]$ is
+\begin{equation}
+    \hat{\mu}_N = \frac{1}{N}\sum_{i=1}^{N} f(X_i),
+\end{equation}
+where $X_i$ are independent random draws from the target distribution. By the Law of Large Numbers, $\hat{\mu}_N \rightarrow \mu$ almost surely as $N \rightarrow \infty$. The Central Limit Theorem implies
+\begin{equation}
+    \sqrt{N}(\hat{\mu}_N - \mu) \xrightarrow{d} \mathcal{N}(0, \sigma^2),
+\end{equation}
+so the standard error declines at rate $1/\sqrt{N}$. This slow convergence motivates the study of variance-reduction techniques that deliver comparable precision with fewer simulated paths \citep{glasserman2004, lawKelton2015}.
+
+Error analysis decomposes mean-squared error into bias and variance. Since unbiased estimators have zero bias, simulation efficiency is governed mainly by variance. Empirical variance can be estimated via batch means or replication analysis, and confidence intervals quantify estimator precision. Figure~\ref{fig:mc-convergence} may illustrate the typical $1/\sqrt{N}$ convergence pattern.
+
+\subsection{Variance Reduction Techniques}
+
+Variance-reduction methods exploit structure in the problem to lower estimator variance without introducing bias. Let $\hat{\theta}$ denote a Monte Carlo estimator with variance $\mathrm{Var}[\hat{\theta}]$. A successful technique produces an alternative estimator $\hat{\theta}^{*}$ satisfying $\mathrm{Var}[\hat{\theta}^{*}] < \mathrm{Var}[\hat{\theta}]$ for equal computational effort.
+
+\paragraph{Common Random Numbers (CRN).}
+CRN reuses identical random-number streams across related simulations to induce positive correlation. If $Y_1$ and $Y_2$ are outputs using the same random seeds,
+\[\mathrm{Var}(Y_1 - Y_2) = \mathrm{Var}(Y_1) + \mathrm{Var}(Y_2) - 2\rho\,\sigma_{Y_1}\sigma_{Y_2}.\]
+A positive correlation $\rho$ lowers the variance of their difference, improving precision in comparative analyses such as sensitivity tests in credit simulations.
+
+\paragraph{Antithetic Variates.}
+Antithetic sampling generates negatively correlated pairs. For a uniform draw $U_i$, its complement $1-U_i$ provides an antithetic pair. When transformed via the Box–Muller or Polar method into standard normals, the resulting $(Z_i, -Z_i)$ pairs yield reduced estimator variance for monotonic payoffs \citep{glasserman2004}. The method is simple and typically effective.
+
+\paragraph{Stratified and Latin Hypercube Sampling.}
+Stratified sampling divides the uniform $(0,1)$ range into $K$ equal-probability strata, drawing one sample from each. The estimator becomes
+\[\hat{\mu}_{strat} = \frac{1}{K}\sum_{i=1}^{K} f(F^{-1}(U_i)),\]
+ensuring coverage across the distribution and reducing clustering in the tails. Latin Hypercube Sampling generalises this idea to multiple dimensions by enforcing stratification along each marginal. The design achieves superior space-filling and typically yields lower variance for smooth response surfaces \citep{lawKelton2015}. Figure~\ref{fig:lhs-schematic} can visualise the difference between random sampling and LHS.
+
+\paragraph{Control Variates.}
+Control variates exploit correlation with a secondary variable of known expectation. Given $f(X)$ and $g(X)$ with $\mathbb{E}[g(X)]$ known, the adjusted estimator is
+\begin{equation}
+    \hat{\mu}_{cv} = \bar{f} - b(\bar{g} - \mathbb{E}[g]),
+\end{equation}
+where $b^{*} = \mathrm{Cov}(f,g) / \mathrm{Var}(g)$. Variance reduction improves with correlation strength. In this project, an analytically priced risky bond serves as a control variate for the simulated credit-linked note payoff.
+
+\subsection{Application to Credit Derivatives}
+
+Credit derivatives provide a structured and intuitive test case for Monte Carlo simulation. A risky bond differs from a risk-free bond by the possibility of default, which halts coupon payments and triggers a recovery amount. A credit default swap transfers this risk: the buyer pays periodic premiums until default or maturity and receives compensation equal to the loss given default. The relationship
+\[\text{Risk-Free Bond} = \text{Risky Bond} + \text{CDS}\]
+captures this equivalence succinctly \citep{schonbucher2003}. A credit-linked note embeds this exposure in a funded form, offering higher coupons in exchange for assuming the reference entity’s default risk. In valuation terms, a CLN is a bond combined with a short CDS position \citep{okaneTurnbull2003}. Deterministic hazard frameworks derive survival from bootstrapped curves, while stochastic frameworks model the hazard as a random process requiring simulation. Variance-reduction methods enhance estimator stability in low-default regimes.
+
+\subsection{Implementation and Practical Notes}
+
+Simulations are implemented in Python using NumPy. The Mersenne Twister ensures reproducibility, and seeds are fixed for each experiment. Interest-rate and hazard-rate curves are represented by exponential functional forms for tractability. In production these curves would be bootstrapped from traded instruments such as swaps and CDSs, but that process lies outside this project’s scope. Calendar conventions and accrual adjustments are abstracted away, since the emphasis is on comparing convergence rates and variance-reduction performance rather than on reproducing full market infrastructure.
+
+\subsection{Summary and Literature Gap}
+
+While the literatures on Monte Carlo simulation and credit risk are individually mature, few studies apply variance-reduction methods systematically to credit-linked notes or related structures. This project fills that gap by demonstrating how classical techniques can improve estimator precision for stochastic-hazard credit payoffs.

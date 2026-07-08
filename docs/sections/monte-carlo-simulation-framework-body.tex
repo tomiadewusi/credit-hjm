@@ -1,0 +1,215 @@
+\section{Monte Carlo Simulation Framework}
+
+Monte Carlo simulation is required whenever payoffs depend on entire paths of the short rate and hazard rate. Credit linked notes often contain features such as range accrual coupons, knockouts on the redemption payment, or digital adjustments to principal. These features depend on the evolution of $(r_t, h_t)$ across time rather than on their terminal values only. Analytic integration is not possible once the payoff depends on the trajectory. The HJM framework introduced earlier provides a consistent way to generate stochastic paths for the forward surface. From these paths we extract $(r_t, h_t)$ along the diagonal and compute discount factors and survival probabilities path by path.
+
+The structure of this section is as follows. Section 4.1 describes the Monte Carlo estimator and sampling method. Section 4.2 describes error diagnostics. Section 4.3 introduces variance reduction techniques. Section 4.4 develops the control variate methodology designed specifically for CLNs.
+
+\subsection{Why Monte Carlo is Needed for CLNs}
+
+Simple risky bonds and vanilla CLNs with constant coupons are not path dependent. Their values can be computed analytically using discount factors and survival probabilities. Exotic CLN features break this structure. Examples include:
+
+\begin{itemize}
+    \item \textbf{Range accrual coupons}. The coupon at $t_i$ depends on the fraction of dates in $[t_{i-1}, t_i]$ for which $\gamma(t, t) \in [L, U]$.
+    \item \textbf{Knockout redemption}. The principal is paid only if the hazard stays below a barrier over the life of the note.
+    \item \textbf{Digital jumps}. The redemption amount depends on whether the hazard rate crosses a threshold before a specific date.
+    \item \textbf{Stochastic discounting and survival}. Under the full HJM model, the discount factor and survival probability are path integrals of stochastic processes rather than deterministic functions.
+\end{itemize}
+
+These features make the payoff depend on infinitely many points of the path. Monte Carlo methods are therefore unavoidable.
+
+\subsection{Sampling and Estimator Construction}
+
+Let $Y$ be the discounted payoff of the CLN under the risk neutral measure. Monte Carlo simulation generates $N$ independent replicas $Y^{(1)}, \dots, Y^{(N)}$. The basic estimator is
+\[
+\hat{Y}_N = \frac{1}{N} \sum_{i=1}^N Y^{(i)}.
+\]
+
+\paragraph{Central limit theorem}
+
+Under mild regularity conditions:
+\[
+\sqrt{N}\big(\hat{Y}_N - \mathbb{E}[Y]\big)
+\rightarrow
+\mathcal{N}\big(0, \operatorname{Var}(Y)\big).
+\]
+
+\paragraph{Variance of the estimator}
+
+\[
+\operatorname{Var}(\hat{Y}_N) = \frac{1}{N} \operatorname{Var}(Y).
+\]
+
+\subsubsection*{Generation of correlated normals}
+
+The HJM dynamics involve two Brownian motions with correlation $\rho$. To generate correlated shocks:
+
+\[
+Z_r = U, \qquad Z_h = \rho U + \sqrt{1 - \rho^2}\,V,
+\]
+where $U$ and $V$ are independent standard normals. At each time step, these shocks are inserted into the Euler or Milstein discretisation schemes described below.
+
+\subsection{Discretisation of the HJM Dynamics}
+
+The HJM framework produces forward rate processes $f(t,T)$ and $\gamma(t,T)$ for $T > t$. To simulate short rate and hazard paths we evolve these forward surfaces across a rectangular time-maturity grid.
+
+\subsubsection*{Time discretisation}
+
+Let the simulation horizon be $[0, T_{\max}]$ with a time grid:
+\[
+0 = t_0 < t_1 < \dots < t_M = T_{\max}, \qquad \Delta t = t_{k+1} - t_k.
+\]
+
+For each $t_k$ we store the values of the forward curve at maturities $T_j \ge t_k$. The diagonal elements give:
+\[
+r_{t_k} = f(t_k, t_k), \qquad h_{t_k} = \max\{\gamma(t_k, t_k), 0\}.
+\]
+
+\subsubsection*{Euler discretisation for forward rates}
+
+For each maturity $T_j > t_k$:
+\[
+f(t_{k+1}, T_j)
+=
+f(t_k, T_j)
++ \alpha_r(t_k, T_j)\,\Delta t
++ \sigma_r(t_k, T_j)\sqrt{\Delta t}\,Z_r.
+\]
+
+A similar expression holds for the forward hazard curve:
+\[
+\gamma(t_{k+1}, T_j)
+=
+\gamma(t_k, T_j)
++ \alpha_h(t_k, T_j)\,\Delta t
++ \sigma_h(t_k, T_j)\sqrt{\Delta t}\,Z_h.
+\]
+
+Euler is stable for forward rates because their diffusion is normal.
+
+\subsubsection*{Milstein scheme for the hazard diagonal}
+
+Forward hazards follow a normal diffusion. The spot hazard $h_t = \gamma(t,t)$ however represents the instantaneous intensity. To reduce downward drift and keep the hazard positive we apply a simple Milstein correction:
+
+\[
+h_{t_{k+1}} =
+h_{t_k}
++ \alpha_h(t_k, t_k)\,\Delta t
++ \sigma_h(t_k, t_k)\sqrt{\Delta t}\,Z_h
++ \frac{1}{2}\sigma_h(t_k, t_k)\frac{\partial \sigma_h}{\partial h}(t_k, t_k)\Delta t (Z_h^2 - 1).
+\]
+
+Since $\sigma_h(t,T) = \sigma_h e^{-c_h(T - t)}$ does not depend on $h$, the derivative term is zero. For completeness we include a positivity clamp:
+
+\[
+h_{t_{k+1}} \leftarrow \max\{h_{t_{k+1}}, 0\}.
+\]
+
+\subsubsection*{Numerical construction of discount factors and survival probabilities}
+
+Along each simulated path:
+\[
+D(0, t_{k+1})
+=
+D(0, t_k)\exp\big(-r_{t_k}\Delta t\big),
+\]
+\[
+S(0, t_{k+1})
+=
+S(0, t_k)\exp\big(-h_{t_k}\Delta t\big).
+\]
+
+These pathwise discount and survival measures feed directly into the CLN payoff calculator.
+
+\subsection{Error Analysis and Diagnostics}
+
+The sample variance estimator is
+\[
+\hat{\sigma}^2_N = \frac{1}{N - 1} \sum_{i=1}^N \big(Y^{(i)} - \hat{Y}_N\big)^2.
+\]
+
+A $(1 - \alpha)$ confidence interval is
+\[
+\hat{Y}_N \pm z_{1 - \alpha/2}\frac{\hat{\sigma}_N}{\sqrt{N}}.
+\]
+
+\paragraph{Diagnostic techniques}
+
+\begin{itemize}
+    \item \textbf{Running mean plot}. Reveals slow convergence or drift.
+    \item \textbf{Batch means}. Break one large sample into $K$ batches.
+    \item \textbf{Independent replications}. Repeat the entire simulation with different seeds.
+\end{itemize}
+
+These diagnostics help detect correlation, instability or variance explosion under extreme parameters.
+
+\subsection{Variance Reduction Techniques}
+
+Variance reduction is essential for CLN pricing because exotic coupons may have high variance when simulated directly.
+
+\subsubsection*{Common random numbers}
+
+For two related payoffs $X$ and $Y$ using the same random numbers:
+
+\[
+\operatorname{Var}(X - Y)
+=
+\operatorname{Var}(X) + \operatorname{Var}(Y) - 2\operatorname{Cov}(X,Y).
+\]
+
+CLNs with exotic coupons are highly correlated with vanilla CLNs under HJM. CRN therefore produce substantial variance reduction when estimating differences.
+
+\subsubsection*{Antithetic variates}
+
+Given shocks $Z$, also simulate with $-Z$:
+\[
+\hat{Y}^{\text{anti}} = \frac{1}{2}\big(Y(Z) + Y(-Z)\big).
+\]
+
+This reduces variance when the payoff is monotone in the shocks. For credit payoffs monotonicity often holds approximately.
+
+\subsubsection*{Stratified sampling and Latin hypercube sampling}
+
+Stratified sampling partitions $[0,1]$ into $K$ intervals with one sample drawn from each. Mapping these to normal variates ensures better space filling.
+
+Latin hypercube sampling extends stratification to multiple dimensions. It is particularly beneficial when simulating high dimensional hazard and rate paths under HJM.
+
+\subsubsection*{Control variates}
+
+Given a control $C$ with known expectation:
+
+\[
+\hat{Y}_N^{\text{cv}} = \hat{Y}_N + b(\hat{C}_N - \mathbb{E}[C]),
+\]
+with optimal
+\[
+b^{\star} = -\frac{\operatorname{Cov}(Y, C)}{\operatorname{Var}(C)}.
+\]
+
+\subsection{Control Variate Design for CLNs}
+
+Under the HJM framework, the expected Monte Carlo price of a vanilla CLN equals the analytic price obtained from the deterministic curves. This property is essential. It means the vanilla CLN is an ideal control variate for any exotic CLN with the same maturity and reference name.
+
+Let $Y$ be the exotic CLN payoff and let $C$ be the vanilla CLN payoff on the same path. The analytic vanilla price is denoted $V_{\text{van}}$.
+
+\[
+\hat{Y}_N^{\text{cv}} = \hat{Y}_N + b(\hat{C}_N - V_{\text{van}}).
+\]
+
+\paragraph{Practical estimation of $b$}
+
+Estimate $b$ using sample covariance:
+\[
+b = -\frac{\widehat{\operatorname{Cov}}(Y, C)}{\widehat{\operatorname{Var}}(C)}.
+\]
+
+\paragraph{Why this control works extremely well}
+
+\begin{itemize}
+    \item The exotic CLN differs from the vanilla CLN in only a small region of state space where exotic triggers activate.
+    \item When the hazard and rate volatilities are modest, most simulated paths behave like a vanilla CLN.
+    \item Correlation between $Y$ and $C$ is very high, often above 0.95.
+    \item HJM ensures $\mathbb{E}[C] = V_{\text{van}}$, so the control variate is perfectly aligned in expectation.
+\end{itemize}
+
+The resulting variance reduction is dramatic, typically reducing error by one or two orders of magnitude.
+

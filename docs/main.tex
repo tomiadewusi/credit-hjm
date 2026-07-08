@@ -1,0 +1,51 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{csquotes}
+\usepackage{float}
+\usepackage[numbers,sort&compress]{natbib}
+
+% TikZ and PGFPlots packages
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% Load 3D plotting libraries
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{decorations.markings}
+\usetikzlibrary{calc}
+\usetikzlibrary{positioning}
+
+% PGFPlots 3D surface library
+\usepgfplotslibrary{colormaps}
+\usepgfplotslibrary{patchplots}
+
+
+\title{Variance Reduction for Monte Carlo Pricing of Credit Derivatives}
+\author{Olatomiwa Adewusi}
+\date{October 19, 2025}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+
+% Option A: use \input so we don't create per-section .aux in build/
+\input{sections/introduction-body}
+\input{sections/literature-review-body}
+\input{sections/credit-model-setup-body}
+\input{sections/monte-carlo-simulation-framework-body}
+\input{sections/numerical-experiments-and-results-body}
+\input{sections/discussion-of-results-body}
+\input{sections/exotic-extensions-body}
+\input{sections/implementation-notes-body}
+\input{sections/conclusion-body}
+\input{sections/appendices-body}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+\end{document}
+
+

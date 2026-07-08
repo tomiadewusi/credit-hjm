@@ -1,0 +1,330 @@
+\section{Credit Model Setup}
+
+\subsection{Credit Product Definitions}
+
+This section introduces three core instruments used throughout the project: risky bonds, credit default swaps, and credit linked notes. The goal is to give a clear, intuitive explanation that assumes no prior knowledge of credit markets. We first explain how default works, then show how discount factors and survival probabilities enter the valuation of each cashflow. We break each payoff into simple components and give diagrams that illustrate the structure visually.
+
+\subsubsection*{Default, Recovery, and Survival}
+
+A borrower may default at any time before a bond matures. Default means:
+\begin{itemize}
+    \item all future coupon payments stop,
+    \item the principal is not paid back in full,
+    \item instead the investor receives a recovery amount $R$ times notional,
+    \item recovery is typically paid immediately when default occurs.
+\end{itemize}
+
+If default happens at time $t$, this event has probability density $h(t)S(0,t)$, where $h(t)$ is the hazard rate and $S(0,t)$ is the survival probability up to $t$. This explains why recovery terms appear as integrals while coupons appear as summations over discrete dates.
+
+Discount factors $D(0,t)$ reduce future cashflows to present value. Survival probabilities $S(0,t)$ weigh cashflows by the chance that the issuer has not defaulted.
+
+\subsubsection*{Risky Bonds}
+
+A risky bond pays periodic coupons and a principal at maturity, but only if the issuer survives until these dates. If the issuer defaults earlier, coupons stop and the investor receives a recovery payment. We decompose the value of a risky bond into three parts:
+
+\paragraph{1. Coupon leg}
+\[
+V_{\text{coupon}} = \sum_{i} c\,D(0,t_i)\,S(0,t_i).
+\]
+This represents coupon payments on dates $t_i$, discounted and multiplied by survival probability, since coupons are received only if the issuer survives to each payment date.
+
+\paragraph{2. Redemption leg}
+\[
+V_{\text{redemption}} = D(0,T)\,S(0,T).
+\]
+This represents repayment of principal at maturity $T$, conditional on survival.
+
+\paragraph{3. Recovery leg}
+\[
+V_{\text{recovery}}
+= \int_0^T R\,D(0,t)\,h(t)\,S(0,t)\,dt.
+\]
+This represents the recovery amount paid if default occurs at time $t$. The integrand contains $h(t)S(0,t)$, which is the probability density of default at exactly $t$.
+
+\paragraph{Total value}
+\[
+V_{\text{risky}} = V_{\text{coupon}} + V_{\text{redemption}} + V_{\text{recovery}}.
+\]
+
+This decomposition makes the valuation intuitive: coupons and redemption require survival, while recovery is paid only when default occurs.
+
+\paragraph{Cashflow diagram}
+
+\begin{verbatim}
+Time:   0         t1        t2        ...       T
+        |---------|---------|---------|---------|
+Cash:     c        c         c         c     +1 (if survive)
+Default:           X  ---> Recovery R * Notional
+\end{verbatim}
+
+\subsubsection*{Credit Default Swaps}
+
+A credit default swap (CDS) transfers the default risk of a reference entity from one party to another. There are two legs.
+
+\paragraph{1. Premium leg}
+The protection buyer pays a periodic premium at rate $s$ until maturity or default:
+\[
+V_{\text{prem}} = s \sum_{i} D(0,t_i)\,S(0,t_i).
+\]
+Payments stop at default because the buyer no longer pays premiums afterwards.
+
+\paragraph{2. Protection leg}
+If default occurs at time $t$, the protection seller pays the loss given default:
+\[
+V_{\text{prot}} = (1-R)\int_0^T D(0,t)\,h(t)\,S(0,t)\,dt.
+\]
+
+\paragraph{Fair spread}
+At inception, the CDS is priced so that:
+\[
+V_{\text{prem}} = V_{\text{prot}}.
+\]
+The premium $s$ that satisfies this equality is the market CDS spread.
+
+\paragraph{Intuition}
+\begin{itemize}
+    \item A protection buyer pays small regular premiums and receives a large payment if default occurs. This is a short credit position.
+    \item A protection seller receives premiums but must compensate the buyer if the issuer defaults. This is a long credit position.
+\end{itemize}
+
+\paragraph{Cashflow diagram}
+
+\begin{verbatim}
+Protection Buyer:
+   pays:     s   s   s   s   ...
+   receives: (1 - R) after default
+
+Protection Seller:
+   receives: s   s   s   s   ...
+   pays:     (1 - R) after default
+\end{verbatim}
+
+\subsubsection*{Identity Linking Bonds and CDS}
+
+Holding a risky bond exposes the investor to default risk. Buying CDS protection removes this risk. Therefore:
+\[
+\text{Risk Free Bond} = \text{Risky Bond} + \text{CDS}.
+\]
+Economically:
+\begin{itemize}
+    \item the risky bond has high yield but suffers losses on default,
+    \item the CDS pays those losses,
+    \item the combination behaves like a risk free bond.
+\end{itemize}
+
+This identity is fundamental. It also implies:
+\[
+\text{Risky Bond} = \text{Risk Free Bond} - \text{CDS}.
+\]
+
+\subsubsection*{Credit Linked Notes}
+
+A credit linked note (CLN) embeds a credit derivative inside a funded note. Formally:
+\[
+\text{CLN} = \text{Risk Free Bond} - \text{CDS}.
+\]
+
+\paragraph{Cashflows}
+\begin{itemize}
+    \item If the issuer does not default, the CLN pays a high coupon and full principal.
+    \item If default occurs, the principal is reduced by the loss $(1-R)$, mirroring a short CDS payoff.
+\end{itemize}
+
+\paragraph{Component breakdown}
+As with the risky bond, we decompose:
+\[
+V_{\text{CLN}} = V_{\text{coupon}} + V_{\text{redemption}} + V_{\text{recovery}},
+\]
+but the coupon is higher because the investor is effectively selling protection.
+
+\paragraph{Why CLNs exist}
+
+Many investors, such as insurance companies and funds with strict mandates, may not be allowed to trade derivatives or short credit risk directly. A CLN embeds a short CDS into a funded bond so that:
+\begin{itemize}
+    \item the investor receives high yield (because they are short credit risk),
+    \item the position is legal because it is structured as a note,
+    \item the exposure is funded, so the credit protection seller does not need to post collateral.
+\end{itemize}
+
+CLNs allow credit risk to be transferred to investors who cannot participate directly in the CDS market.
+
+\paragraph{CLN diagram}
+
+\begin{verbatim}
+CLN Investor:
+   receives: high coupon until default or maturity
+   receives: full principal if survive
+   receives: reduced principal if default
+
+Dealer:
+   receives: CDS protection from CLN investor
+   pays: higher coupon to CLN investor
+\end{verbatim}
+
+%----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+\subsection{Deterministic Hazard and Short Rate Curves}
+
+In practical credit modelling, default risk is represented through a hazard rate or default intensity function $h(t)$. The survival probability over the interval $[0,t]$ is
+\begin{equation}
+S(0,t) = \exp\left(-\int_0^t h(u)\,du\right),
+\end{equation}
+which follows from the assumption that default arrival is governed by a time inhomogeneous Poisson process.
+
+Market practice constructs $h(t)$ by bootstrapping from credit default swap (CDS) spreads or bond prices. Given recovery $R$, the par CDS spread at maturity $T$ satisfies a balance between premium and protection legs. Solving these equations across maturities produces a term structure of survival probabilities, and differentiating $-\log S(0,t)$ produces an implied hazard curve.
+
+In this project we do not calibrate to market CDS instruments because the objective is to focus on simulation techniques rather than calibration. Instead, we use simple parametric curves that retain the right qualitative shape and allow closed form expressions for $S(0,t)$ and $D(0,t)$.
+
+\subsection{Exponential Hazard and Short Rate Curves}
+
+We specify both the short rate $r(t)$ and hazard rate $h(t)$ with exponential decay forms
+\begin{equation}
+r(t) = a_r + b_r e^{-c_r t},
+\qquad
+h(t) = a_h + b_h e^{-c_h t}.
+\end{equation}
+
+These functions are widely used because they are analytically tractable and economically interpretable. The associated discount factor and survival probability admit closed form expressions:
+\begin{align}
+D(0,t) &= \exp\left(-\int_0^t r(u)\,du\right) = \exp\left(-a_r t - \frac{b_r}{c_r}\bigl(1 - e^{-c_r t}\bigr)\right),
+\\[0.5em]
+S_{\text{det}}(0,t) &= \exp\left(-\int_0^t h(u)\,du\right) = \exp\left(-a_h t - \frac{b_h}{c_h}\bigl(1 - e^{-c_h t}\bigr)\right).
+\end{align}
+
+These forms provide the initial term structures that the stochastic model will preserve in expectation.
+
+\subsection{Interpretation of the Parameters $a$, $b$, and $c$}
+
+For a generic curve $f(t) = a + b e^{-c t}$, each parameter plays a distinct economic role:
+
+\paragraph{Long run level $a$}
+The parameter $a$ determines the asymptotic level as $t \to \infty$. For interest rates $a_r$ sets the long run environment. For hazard rates $a_h$ sets the long horizon default intensity.
+
+\paragraph{Initial shift $b$}
+Since $f(0) = a + b$, the parameter $b$ controls how far the curve begins above or below its permanent level. A positive $b$ yields a downward sloping curve. A negative $b$ yields an upward sloping curve which is typical in credit because long horizon uncertainty is larger than short horizon uncertainty.
+
+\paragraph{Mean reversion speed $c$}
+The parameter $c$ controls the speed with which the curve transitions from $f(0)$ toward $a$. A larger $c$ produces faster convergence and a steeper initial slope. It is often helpful to express this in terms of the half life
+\begin{equation}
+t_{1/2} = \frac{\ln 2}{c},
+\end{equation}
+which is the time required for the transient exponential term $b e^{-c t}$ to fall to half of its initial magnitude. Stating the half life gives a clear qualitative justification for the chosen parameters which is important when the curves are not calibrated.
+
+\subsection{Chosen Parameters and Economic Motivation}
+
+The project uses simple but realistic parameter sets for the short rate and for two credit qualities: an investment grade (IG) name and a high yield (HY) name. These curves are chosen for plausibility rather than calibration but retain appropriate risk levels and term structure slopes.
+
+\paragraph{Short rate parameters}
+\begin{align*}
+a_r = 0.02, \qquad b_r = 0.02, \qquad c_r = 0.35.
+\end{align*}
+This yields $r(0) = 4\%$ and a long run level of $2\%$. The half life is approximately two years. This generates a mild downward slope that is consistent with many developed market environments.
+
+\paragraph{Investment grade hazard rate}
+\begin{align*}
+a_h = 0.015, \qquad b_h = -0.012, \qquad c_h = 0.30.
+\end{align*}
+This gives $h(0) = 0.003$ and a long run intensity of $0.015$. The curve slopes upward with a half life near 2.3 years. This matches the pattern of IG credit risk where short horizon default risk is very small but long run uncertainty is higher.
+
+\paragraph{High yield hazard rate}
+\begin{align*}
+a_h = 0.03, \qquad b_h = -0.02, \qquad c_h = 0.40.
+\end{align*}
+This yields $h(0) = 0.01$ and a long run intensity of $0.03$. The slope is steeper and the half life is shorter (about 1.7 years). This reflects the behaviour of BB or B rated credits with materially higher default risk.
+
+\subsection{Spread Interpretation Under Recovery}
+
+Under reduced form modelling with recovery of par, the credit spread associated with a hazard rate is
+\begin{equation}
+s(t) = (1 - R)\,h(t),
+\end{equation}
+and we adopt $R = 40\%$ which is standard for unsecured corporates.
+
+\paragraph{Investment grade spreads}
+\begin{align*}
+s_{\text{IG}}(0) &= 0.6 \times 0.003 = 18\ \text{bps}, \\
+s_{\text{IG}}(\infty) &= 0.6 \times 0.015 = 90\ \text{bps}.
+\end{align*}
+
+\paragraph{High yield spreads}
+\begin{align*}
+s_{\text{HY}}(0) &= 0.6 \times 0.01 = 60\ \text{bps}, \\
+s_{\text{HY}}(\infty) &= 0.6 \times 0.03 = 180\ \text{bps}.
+\end{align*}
+
+These spread levels are reasonable for IG and HY credit and support the qualitative interpretation of the chosen parameters.
+
+\subsection{HJM Style Stochastic Rate and Hazard Models}
+
+The deterministic curves defined above describe the initial term structures. To introduce stochastic behaviour while preserving these curves in expectation, we adopt a simple one factor Heath Jarrow Morton (HJM) style model for both rates and hazards.
+
+\subsubsection*{Forward rates and forward hazards}
+
+Let $f(t,T)$ denote the instantaneous forward rate at time $t$ for maturity $T$, and let $\gamma(t,T)$ denote the forward hazard rate. Discount factors and survival probabilities can be written as
+\begin{align}
+D(t,T) &= \exp\Big(-\int_t^T f(t,u)\,du\Big), \\
+S(t,T) &= \exp\Big(-\int_t^T \gamma(t,u)\,du\Big).
+\end{align}
+At time zero the forward curves are
+\begin{align}
+f(0,T) &= r(T) = a_r + b_r e^{-c_r T}, \\
+\gamma(0,T) &= h(T) = a_h + b_h e^{-c_h T},
+\end{align}
+so the deterministic short rate and hazard curves are exactly the initial forward curves. The short rate and spot hazard are obtained from the diagonals:
+\begin{equation}
+r_t = f(t,t), \qquad h_t = \max\{\gamma(t,t),0\}.
+\end{equation}
+We clip the hazard to preserve non negativity.
+
+\subsubsection*{Volatility structure and drift}
+
+We use one factor HJM dynamics for the forward rate surface
+\begin{equation}
+df(t,T) = \alpha_r(t,T)\,dt + \sigma_r(t,T)\,dW_t^{(r)},
+\end{equation}
+and for the forward hazard surface
+\begin{equation}
+d\gamma(t,T) = \alpha_h(t,T)\,dt + \sigma_h(t,T)\,dW_t^{(h)}.
+\end{equation}
+The Brownian motions are correlated with
+\begin{equation}
+dW_t^{(r)} dW_t^{(h)} = \rho\,dt.
+\end{equation}
+
+We choose exponentially decaying volatility functions with decay rates equal to the curve decay rates:
+\begin{align}
+\sigma_r(t,T) &= \sigma_r e^{-c_r (T - t)}, \\
+\sigma_h(t,T) &= \sigma_h e^{-c_h (T - t)}.
+\end{align}
+This means short maturity forwards have higher volatility, while long maturity forwards close to their long run levels have lower volatility.
+
+In the one factor HJM model the no arbitrage condition determines the drift. For the rate surface we have
+\begin{equation}
+\alpha_r(t,T) = \sigma_r(t,T)\int_t^T \sigma_r(t,u)\,du
+= \sigma_r e^{-c_r (T - t)} \int_t^T \sigma_r e^{-c_r (u - t)}\,du
+= \frac{\sigma_r^2}{2c_r}\Big(1 - e^{-2c_r(T - t)}\Big).
+\end{equation}
+For the hazard surface we adopt the analogous drift
+\begin{equation}
+\alpha_h(t,T) = \sigma_h(t,T)\int_t^T \sigma_h(t,u)\,du
+= \frac{\sigma_h^2}{2c_h}\Big(1 - e^{-2c_h(T - t)}\Big).
+\end{equation}
+This choice ensures that the initial discount factor and survival probability curves are preserved in expectation under the risk neutral measure.
+
+\subsubsection*{Short rate and hazard extraction}
+
+In implementation we discretise $T$ on a maturity grid $T_0 < T_1 < \dots < T_N$ and evolve $f(t,T_j)$ and $\gamma(t,T_j)$ forward in time using an Euler scheme. At each time step $t_n$ we approximate
+\begin{equation}
+r_{t_n} \approx f(t_n, T_{j^*}), \qquad h_{t_n} \approx \max\{\gamma(t_n, T_{j^*}),0\},
+\end{equation}
+where $T_{j^*}$ is the grid point closest to $t_n$. The short rate path $\{r_{t_n}\}$ is used to build discount factors along the path. The hazard path $\{h_{t_n}\}$ is integrated to obtain survival along the path. These quantities drive the CLN payoffs in the Monte Carlo framework.
+
+\paragraph{Purpose and limitations}
+
+The HJM construction provides a simple arbitrage free model that is consistent with the initial discount and survival curves. It is not intended as a fully realistic market model. Rather, it is chosen because it allows us to:
+\begin{itemize}
+    \item retain analytic expressions for $D(0,t)$ and $S_{\text{det}}(0,t)$,
+    \item simulate stochastic rate and hazard paths that preserve these curves in expectation,
+    \item construct a clean control variate based on a vanilla CLN that matches the analytic price in expectation.
+\end{itemize}
+This balance between tractability and structure is appropriate for a simulation focused project that aims to illustrate Monte Carlo methods and variance reduction for credit linked notes.
