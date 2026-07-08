@@ -391,16 +391,21 @@ its marginal shape.
 The diagonal provides the instantaneous hazard rate
 \[
 h(t) = \gamma(t,t),
-\qquad
-h(t) \leftarrow \max\{h(t)),0\},
 \]
 and cumulative survival is updated pathwise as
 \[
 S(0,t) = \exp\!\left(-\int_0^t h(u)\,du\right).
 \]
 
-These quantities feed directly into CDS spreads $s(t) = (1 - R)h(t)$ and into all
-credit components of the CLN payoff.
+These quantities feed directly into the CLN payoff. When the range--accrual
+condition needs a model spread, we use the floored proxy
+\[
+s(t) = (1 - R)\max\{h(t),0\}.
+\]
+The floor is applied only for spread interpretation. The Gaussian HJM hazard path
+itself is otherwise left unconstrained, so pathwise survival is driven by the raw
+simulated diagonal. This is a modelling simplification rather than a market
+positivity guarantee.
 
 \subsubsection*{How the SDEs Drive the Simulation}
 

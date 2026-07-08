@@ -107,8 +107,9 @@ $\tilde{\phi}_N$.
 
 CRNs are heuristic. There is no guarantee that the covariance is positive.
 Poorly matched payoffs can increase variance. In practice, CRNs work best when
-comparing structurally similar payoffs. By design, our vanilla CLN will be an 
-excellent control variate for our exotic CLN. 
+comparing structurally similar payoffs. The vanilla CLN is a natural candidate
+control for the exotic CLN, but its realised effectiveness depends on the chosen
+spread corridor and resulting payoff variation.
 
 \subsection{Control Variates}
 
@@ -198,9 +199,10 @@ $[L,U]$ over the coupon observation dates.
 \paragraph{Control Variates.}
 Let $Y$ be the discounted payoff of the exotic CLN, and let $C$ be the
 discounted payoff of a vanilla CLN with the same notional, maturity, and
-recovery rate. Because the exotic structure modifies redemption by a fractional
-factor depending on spread behaviour, the correlation between $Y$ and $C$ is
-naturally high. Control variates therefore yield strong variance reduction.
+recovery rate. Because the exotic structure modifies only the redemption while
+leaving the coupon and recovery legs close to the vanilla structure, this is a
+plausible control variate. Whether it produces strong variance reduction is an
+empirical question governed by the realised correlation between $Y$ and $C$.
 
 \paragraph{Enhancing Control Variates Using Common Random Numbers.}
 A further improvement is obtained by coupling $Y$ and $C$ via identical random

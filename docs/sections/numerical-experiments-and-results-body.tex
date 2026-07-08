@@ -2,7 +2,7 @@
 
 \subsection{Curve Repricing and HJM Consistency}
 
-The first validation step was to confirm that the HJM hazard rate simulation reproduces the initial term structure when volatility is set to zero. I generated pathwise survival probabilities under the HJM dynamics and compared their cross sectional averages with the original analytic curves. The agreement is essentially exact. Any small deviations are within Monte Carlo sampling error. This verifies that the drift condition is implemented correctly and that the simulation engine is internally consistent.
+The first validation step was to confirm that the HJM hazard rate simulation reproduces the initial term structure when volatility is set to zero. I generated pathwise survival probabilities under the HJM dynamics and compared their cross sectional averages with the original analytic curves. The agreement is essentially exact. Any small deviations are within Monte Carlo sampling error. This verifies that the discrete drift condition is implemented consistently with the grid-based model and that the simulation engine is internally coherent.
 
 In short, before applying any variance reduction or exotic payoffs, the model reprices the curve it was given. This is the minimum requirement and it is satisfied.
 
@@ -50,10 +50,10 @@ Even so, the control variate consistently improves upon the base case. It simply
 The numerical experiments support four main conclusions.
 
 \begin{enumerate}
-    \item The HJM implementation is correct. The model reprices the input curves and the simulated survival probabilities match the analytic term structures.
+    \item The HJM implementation is internally consistent. The model reprices the input curves and the simulated survival probabilities match the analytic term structures under the validation setup.
     \item The Monte Carlo engine behaves as expected. Baseline estimates converge smoothly with increasing numbers of simulations.
     \item Variance reduction is effective. Both antithetic variates and the control variate produce tighter confidence bands than the base case.
     \item Antithetics provide the strongest improvement in this payoff structure. The symmetry of the shocks benefits them more than the correlation structure benefits the control variate.
 \end{enumerate}
 
-Overall, the results are clean, stable, and exactly what is expected from a well implemented Monte Carlo credit engine. The plots illustrate the improvement clearly and the performance gains are visible without further interpretation.
+Overall, the results are clean, stable, and consistent with the behaviour expected from the simplified Monte Carlo credit engine developed here. The plots illustrate the improvement clearly and the performance gains are visible without further interpretation.

@@ -4,6 +4,10 @@ The module uses a deterministic discount curve, deterministic initial survival
 curves, and a simplified HJM-style stochastic evolution for forward hazard
 rates. The simulation grid is semiannual over a three-year horizon, so coupon
 dates coincide with grid points after t = 0.
+
+The Gaussian hazard-rate evolution is intentionally left transparent: raw
+simulated hazards drive pathwise survival updates, while hazards are floored at
+zero only when converted to the model spread used by the range-accrual test.
 """
 
 import numpy as np
@@ -151,9 +155,9 @@ def simulatePaths(normalVariates, useRangeAccrual):
 
             # Count periods that satisfy the range-accrual condition.
             if useRangeAccrual:
-                if lowerBarrier <= spreadIG < upperBarrier:
+                if lowerBarrier <= spreadIG <= upperBarrier:
                     rangeCountIG += 1
-                if lowerBarrier <= spreadHY < upperBarrier:
+                if lowerBarrier <= spreadHY <= upperBarrier:
                     rangeCountHY += 1
             else: 
                 # In the vanilla case the accrual fraction is always 1.
