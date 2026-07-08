@@ -177,7 +177,7 @@ This is the exact discrete counterpart of the continuous time HJM drift
 condition. It ensures that the discrete survival curve implied by
 $\gamma_{i,\cdot}$ is consistent with no arbitrage on the grid.
 
-\paragraph{Important warning.}
+\paragraph{Implementation note.}
 A naive Euler discretisation of
 \[
 d\gamma(t,T) = \alpha_h(t,T)\,dt + \sigma_h(t,T)\,dW_t
@@ -305,7 +305,7 @@ discounting, accrual on default, payment conventions, and the term
 structure of survival probabilities.
 
 Such detail is unnecessary for the numerical experiments in this
-tutorial. Instead, the \emph{model CDS spread} at time $t_i$ is defined
+implementation. Instead, the \emph{model CDS spread} at time $t_i$ is defined
 pathwise by
 \[
 s_i := (1 - R)\,h_i = (1 - R)\,\gamma_{i,i}.
@@ -319,8 +319,8 @@ shifts, ensuring stable Monte Carlo behaviour.
 
 \subsubsection*{Remark on Modelling Choice}
 
-This simplified approach is appropriate here because the focus of the
-tutorial is on the Monte Carlo implementation of the HJM hazard model,
+This simplified approach is appropriate here because the focus is on the
+Monte Carlo implementation of the HJM hazard model,
 rather than on exact replication of market CDS conventions. Should a
 more realistic CDS calibration be required, the same forward-hazard
 paths may be used to compute par spreads using full survival-based

@@ -2,14 +2,14 @@
 
 \paragraph{Note on Sources.}
 The development in this section follows the presentation in 
-\textit{Credit Derivatives: Pricing Models, Models, Pricing, and Implementation} 
-by  \cite{schonbucher2003} very closely.  
+\textit{Credit Derivatives Pricing Models: Models, Pricing and Implementation} 
+by \cite{schonbucher2003} very closely.  
 The notation has been adapted to fit the structure and objectives of this project, 
 but the conceptual framework and modelling sequence are based on Schoenbucher’s exposition.
 
 \subsection{Credit Product Definitions}
 
-This section introduces three core instruments used throughout the project: risky bonds, credit default swaps, and credit linked notes. The goal is to give a clear and intuitive explanation that assumes no prior knowledge of credit markets. Credit markets are more complex and nuanced than what we have presented below. However, we opt for simple models that lead to more meaningful understanding, instead of capturing all the economic realites exactly. We first explain how default works, then show how discount factors and survival probabilities enter the valuation of each cashflow. We break each payoff into simple components and give diagrams that illustrate the structure visually.
+This section introduces three core instruments used throughout the project: risky bonds, credit default swaps, and credit-linked notes. The goal is to give a clear and intuitive explanation that assumes no prior knowledge of credit markets. Credit markets are more complex and nuanced than the simplified setup presented below. The simplified models are chosen to make the numerical structure transparent rather than to capture all market conventions exactly. We first explain how default works, then show how discount factors and survival probabilities enter the valuation of each cashflow. We break each payoff into simple components and give diagrams that illustrate the structure visually.
 
 \subsubsection*{Default, Recovery, and Survival}
 
@@ -50,7 +50,7 @@ V_{\text{recovery}}
 V_{\text{risky}} = V_{\text{coupon}} + V_{\text{redemption}} + V_{\text{recovery}}.
 \]
 
-Note that the coupon and redemption payments occur on fixed dates, while recovery can occur at any time; the time of default is random. Hence, $V_{\text{coupon}}$ is a summation and $V_{\text{recovery}}$ is an integral. In this tutorial, we ignore issues around accrual on default. 
+Note that the coupon and redemption payments occur on fixed dates, while recovery can occur at any time; the time of default is random. Hence, $V_{\text{coupon}}$ is a summation and $V_{\text{recovery}}$ is an integral. In this implementation, accrual on default is omitted. 
 
 
 \begin{figure}[H]
@@ -159,7 +159,7 @@ D(0,t) = \mathbb{E}\big[Q_r(0,t)\big],
 \qquad
 S(0,t) = \mathbb{E}\big[Q_h(0,t)\big],
 \]
-where the expectation is taken under the risk neutral measure.
+where the expectation is taken under the risk-neutral measure.
 
 If the short rate and hazard rate are deterministic
 curves, then the expectations are trivial and we can write
@@ -170,9 +170,9 @@ S(0,t) = \exp\left(-\int_0^t h(u)\,du\right).
 \]
 
 We avoid market calibration and instead specify smooth parametric curves
-$r(t)$ and $h(t)$ with closed form integrals. This makes $D(0,t)$ and
-$S(0,t)$ easy to compute, and simulates cleanly within the HJM
-framework to be described in detail in [section].
+$r(t)$ and $h(t)$ with closed-form integrals. This makes $D(0,t)$ and
+$S(0,t)$ easy to compute and straightforward to embed in the HJM
+framework described below.
 
 \subsection{Exponential Hazard and Short Rate Curves}
 
@@ -419,4 +419,3 @@ In the Monte Carlo engine the role of the HJM equations is very clear:
 The HJM hazard-rate model therefore provides a term-structure-consistent and
 arbitrage-free source of stochastic credit dynamics, giving us the credit
 optionalities required for pricing credit-linked notes.
-
