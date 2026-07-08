@@ -1,9 +1,19 @@
 # macOS metadata
 .DS_Store
 
+# Local environments
+.venv/
+venv/
+
 # Python cache files
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
 
 # LaTeX build outputs
 docs/build/
