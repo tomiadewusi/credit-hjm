@@ -19,8 +19,8 @@ In short, before applying any variance reduction or exotic payoffs, the model re
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\textwidth]{figures/output.png}
-    \caption{Funnel plots for the Monte Carlo tests}
-    \label{fig:orig-vs-hjm-survival-wide}
+    \caption{Monte Carlo convergence and variance reduction funnel plots.}
+    \label{fig:mc-funnel-plots}
 \end{figure*}
 
 The baseline Monte Carlo estimates for both IG and HY CLNs behave exactly as expected. The HY notes produce lower present values due to higher hazard rates and higher expected losses. The IG present values sit comfortably above them. As the number of simulations grows, both sets of estimates exhibit the characteristic funnel shape around the true value, driven by the \(1/\sqrt{n}\) decay of the standard error.
