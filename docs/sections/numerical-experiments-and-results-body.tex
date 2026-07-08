@@ -1,0 +1,59 @@
+\section{Numerical Experiments and Results}
+
+\subsection{Curve Repricing and HJM Consistency}
+
+The first validation step was to confirm that the HJM hazard rate simulation reproduces the initial term structure when volatility is set to zero. I generated pathwise survival probabilities under the HJM dynamics and compared their cross sectional averages with the original analytic curves. The agreement is essentially exact. Any small deviations are within Monte Carlo sampling error. This verifies that the drift condition is implemented correctly and that the simulation engine is internally consistent.
+
+In short, before applying any variance reduction or exotic payoffs, the model reprices the curve it was given. This is the minimum requirement and it is satisfied.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{figures/orig-vs-hjm-survival.pdf}
+    \caption{Original survival curves $S(0,t)$ compared with the corresponding HJM--priced survival probabilities.}
+    \label{fig:orig-vs-hjm-survival-wide}
+\end{figure*}
+
+\subsection{Baseline Monte Carlo Results}
+
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{figures/output.png}
+    \caption{Funnel Plots for the Monte-Carlo Tests}
+    \label{fig:orig-vs-hjm-survival-wide}
+\end{figure*}
+
+The baseline Monte Carlo estimates for both IG and HY CLNs behave exactly as expected. The HY notes produce lower present values due to higher hazard rates and higher expected losses. The IG present values sit comfortably above them. As the number of simulations grows, both sets of estimates exhibit the characteristic funnel shape around the true value, driven by the \(1/\sqrt{n}\) decay of the standard error.
+
+These baseline results form the reference against which the variance reduction methods are judged.
+
+
+
+\subsection{Variance Reduction Performance}
+
+Two variance reduction techniques were implemented. Antithetic variates and a control variate constructed from the corresponding vanilla CLN payoff.
+
+\subsubsection{Antithetic Variates}
+
+Antithetic variates performed exactly as theory predicts. The funnel is visibly tighter and the scatter of Monte Carlo present values contracts significantly. The standard errors fall consistently below the base case across all simulation sizes. The symmetry in the hazard rate shocks aligns well with the payoff structure, which strengthens the effect of antithetics.
+
+Overall, this method is simple, cheap, and clearly effective in this setting.
+
+\subsubsection{Control Variate}
+
+The control variate also reduced variance but not as strongly as antithetics. The initial intention was for the exotic range accrual payoff to be tightly correlated with the vanilla CLN used as the control. In practice, the realised correlation was weaker than expected. The barrier was set at \(150\) basis points and both IG and HY spreads spent most of their time below it. This made the exotic payoff behave very similarly to the vanilla payoff in the IG case in particular. With little variation for the control to explain, its variance reduction effect was modest.
+
+Even so, the control variate consistently improves upon the base case. It simply does not dominate in the same way that antithetics do.
+
+\subsection{Summary}
+
+The numerical experiments support four main conclusions.
+
+\begin{enumerate}
+    \item The HJM implementation is correct. The model reprices the input curves and the simulated survival probabilities match the analytic term structures.
+    \item The Monte Carlo engine behaves as expected. Baseline estimates converge smoothly with increasing numbers of simulations.
+    \item Variance reduction is effective. Both antithetic variates and the control variate produce tighter confidence bands than the base case.
+    \item Antithetics provide the strongest improvement in this payoff structure. The symmetry of the shocks benefits them more than the correlation structure benefits the control variate.
+\end{enumerate}
+
+Overall, the results are clean, stable, and exactly what is expected from a well implemented Monte Carlo credit engine. The plots illustrate the improvement clearly and the performance gains are visible without further interpretation.

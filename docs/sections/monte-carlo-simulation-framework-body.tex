@@ -1,0 +1,431 @@
+% =======================================================================
+% HJM MONTE CARLO IMPLEMENTATION (HAZARD RATES)
+% =======================================================================
+
+\section{Monte Carlo Implementation of the HJM Hazard Model}
+
+\paragraph{Note on Sources.}
+The Monte Carlo formulation in this section follows the structure of 
+\cite{glasserman2004} \textit{Monte Carlo Methods in Financial Engineering} 
+, Chapter~3, and in particular Sections~3.6 and~3.6.1.  
+The original presentation concerns interest-rate term-structure models, 
+and has been translated here into the credit-risk setting.  
+The notation has been adjusted, but the foundations are based on Glasserman's work.
+
+The previous subsection introduced the continuous time HJM framework for
+forward hazard rates $\gamma(t,T)$ and showed how it preserves today’s survival
+curve $S(0,T)$ in expectation. We now translate that theory into a concrete
+Monte Carlo recipe that can be coded directly.
+
+The guiding principles are the same as in the classical HJM interest rate
+literature, but applied to credit:
+
+\begin{itemize}
+    \item Work with the \emph{forward hazard surface} $\gamma(t,T)$, not directly
+          with $h(t)$.
+    \item Initialise a \emph{discrete} forward hazard surface so that it matches
+          the deterministic survival curve exactly on the simulation grid.
+    \item Evolve the surface in time using a one factor volatility structure and
+          a discrete drift chosen to keep survival probabilities arbitrage free
+          on the grid.
+    \item Read the diagonal to obtain the instantaneous hazard $h(t)$ along each
+          path, then integrate $h(t)$ to obtain survival factors and default
+          times.
+\end{itemize}
+
+Throughout this section we keep the short rate deterministic, so all discount
+factors $D(0,t)$ can be precomputed and taken outside the simulation. The Monte
+Carlo part of the model carries only \emph{credit} randomness. 
+
+\subsection{Time and Maturity Grids}
+
+We use a single time grid for both simulation time and credit maturities:
+\[
+0 = t_0 < t_1 < \dots < t_N = T_{\max},
+\qquad
+\Delta t_i = t_{i+1} - t_i.
+\]
+
+In practice:
+
+\begin{itemize}
+    \item Choose $T_{\max}$ to be at least the final maturity of all instruments
+          in the portfolio.
+    \item Use a relatively fine grid around coupon dates and potential call or
+          knock out dates, and a coarser grid in between.
+    \item For simplicity we let both arguments of $\gamma$ live on this same
+          grid, so we will approximate $\gamma(t_i, T_j)$ only for $0 \le i \le j
+          \le N$.
+\end{itemize}
+
+We denote the discrete approximation by $\widehat{\gamma}(t_i, t_j)$, or more
+compactly by $\gamma_{i,j}$ when the meaning is clear.
+
+\subsection{Precomputation of the Deterministic Survival and Discount Curves}
+
+From the parametric curves $r(t)$ and $h(t)$ we compute
+
+\[
+D(0,t)
+  = \exp\!\left(-\int_0^t r(u)\,du\right), 
+\qquad
+S(0,t)
+  = \exp\!\left(-\int_0^t h(u)\,du\right),
+\]
+
+for all grid points $t = t_0,\dots,t_N$. These integrals are closed form for the
+exponential specifications used in this project, so this step is analytic and
+cheap.
+
+\begin{itemize}
+    \item The discount factors $D(0,t_i)$ will be used only for present valuing
+          cashflows and do not interact with the Monte Carlo evolution.
+    \item The survival probabilities $S(0,t_i)$ will be used to initialise the
+          forward hazard surface in a way that is exactly consistent with the
+          deterministic curve.
+\end{itemize}
+
+\subsection{Discrete Initial Forward Hazard Surface}
+
+In continuous time the relationship between the forward hazard curve and the
+survival function at time $t$ is
+\[
+S(t,T)
+  = \exp\!\left(-\int_t^T \gamma(t,u)\,du\right).
+\]
+
+On the discrete grid we approximate this by
+\[
+\widehat{S}(t_i, t_j)
+  = \exp\!\left(-\sum_{l=i}^{j-1} \gamma_{i,l}\,\Delta t_l\right),
+  \qquad j > i,
+\]
+with the convention $\widehat{S}(t_i, t_i) = 1$.
+
+To ensure that the simulated model exactly matches the deterministic survival
+curve at $t = 0$ we demand
+\[
+\widehat{S}(0, t_j) = S(0, t_j),
+\qquad j = 0,\dots,N.
+\]
+This leads to the recursion
+\[
+\widehat{S}(0, t_{j+1})
+ = \widehat{S}(0, t_j)
+   \exp\!\left(-\gamma_{0,j}\,\Delta t_j\right),
+\]
+hence
+\[
+\gamma_{0,j}
+  = -\frac{1}{\Delta t_j}
+     \log\frac{S(0, t_{j+1})}{S(0, t_j)},
+  \qquad j = 0,\dots,N-1.
+\]
+
+\paragraph{Interpretation}
+The discrete forward hazard $\gamma_{0,j}$ is the \emph{average} of the
+continuous forward hazard over $[t_j,t_{j+1}]$. Directly sampling
+$\gamma(0,t_j)$ from the continuous formula would not preserve the survival
+curve on the grid. Matching the log ratio
+$S(0,t_{j+1})/S(0,t_j)$ is therefore essential.
+
+\subsection{Discretising the Volatility Surface}
+
+The continuous model specifies a one factor exponential volatility structure
+\[
+\sigma_h(t,T) = \sigma_h\, e^{-c_h(T - t)}.
+\]
+On the discrete grid we simply sample this at the grid points:
+\[
+\widehat{\sigma}_h(t_i, t_j)
+  = \sigma_h\, e^{-c_h(t_j - t_i)},
+  \qquad j \ge i.
+\]
+
+For simulation it is convenient to write
+\[
+\sigma_{i,j} := \widehat{\sigma}_h(t_i, t_j),
+\]
+and to use a single scalar Brownian motion per path.
+
+\subsection{Discretising HJM Drift on the Grid}
+
+In continuous time the HJM drift restriction ensures that survival curves
+remain arbitrage free. On the discrete grid we want an analogous property:
+for each maturity $T_j$ the survival value $S(t_i, t_j)$ should evolve as a
+martingale when discounted appropriately.
+
+The standard HJM trick is to construct the discrete drift from the volatility
+surface directly. In style of \cite{glasserman2004} (Specifically 3.6.2, The discrete drift), define for fixed $i$ the cumulative
+volatility weights
+\[
+w_n
+  = \sum_{l=i}^n \sigma_{i-1,l}\,\Delta t_l,
+  \qquad n = i,\dots,N-1,
+\]
+with $w_{i-1} := 0$.
+
+The arbitrage free discrete drift at time step $t_{i-1} \to t_i$ is then given by
+\[
+\widehat{\alpha}_h(t_{i-1}, t_j)
+  = \mu_{i-1,j}
+  = \frac{w_j^2 - w_{i-1}^2}{2\,\Delta t_j},
+  \qquad j = i,\dots,N-1.
+\]
+
+This is the exact discrete counterpart of the continuous time HJM drift
+condition. It ensures that the discrete survival curve implied by
+$\gamma_{i,\cdot}$ is consistent with no arbitrage on the grid.
+
+\paragraph{Important warning.}
+A naive Euler discretisation of
+\[
+d\gamma(t,T) = \alpha_h(t,T)\,dt + \sigma_h(t,T)\,dW_t
+\]
+at each maturity $T$ separately breaks the discrete martingale property and
+causes slow drift in the survival curve as $i$ increases. The construction
+above explicitly couples all maturities through the cumulative weights $w_n$
+and avoids this problem.
+
+\subsection{Forward Hazard Update per Time Step}
+
+Given $\gamma_{i-1,j}$ for $j \ge i-1$ at time $t_{i-1}$ we update the forward
+hazards to $t_i$ as follows.
+
+\begin{enumerate}
+    \item Compute the volatility slice
+          \[
+          \sigma_{i-1,j} = \sigma_h\, e^{-c_h(t_j - t_{i-1})},
+          \qquad j = i,\dots,N-1.
+          \]
+    \item Form the cumulative volatility weights
+          \[
+          w_n
+            = \sum_{l=i}^n \sigma_{i-1,l}\,\Delta t_l,
+            \qquad n = i,\dots,N-1,
+          \]
+          and set $w_{i-1} = 0$.
+    \item Compute the discrete drift
+          \[
+          \mu_{i-1,j}
+            = \frac{w_j^2 - w_{j-1}^2}{2\,\Delta t_j},
+            \qquad j = i,\dots,N-1.
+          \]
+    \item Draw a single standard normal $Z_i \sim \mathcal{N}(0,1)$ for this
+          time step.
+    \item Update the forward hazards
+          \[
+          \gamma_{i,j}
+            = \gamma_{i-1,j}
+              + \mu_{i-1,j}\,\Delta t_{i-1}
+              + \sigma_{i-1,j}\,\sqrt{\Delta t_{i-1}}\,Z_i,
+            \qquad j = i,\dots,N-1.
+          \]
+\end{enumerate}
+
+Values with $j < i$ correspond to maturities that have already passed, so they
+are no longer part of the forward surface.
+
+% =======================================================================
+% 3.7  Pathwise Survival Under HJM Hazard Dynamics
+% =======================================================================
+
+\subsection{Pathwise Survival Under HJM Hazard Dynamics}
+
+In many reduced-form credit models, default times are simulated explicitly by
+drawing an exponential random variable and comparing it with the integrated
+hazard process. While this method is theoretically correct, it produces
+\emph{discontinuous} payoff behaviour across paths: cashflows abruptly drop to
+zero once a simulated default time, $\tau$, falls before maturity. For instruments
+with embedded optionality (e.g.  callable coupon structures, range-accrual
+credit-linked notes, and digital redemption features) this “hard default” logic
+leads to numerical kinks and unstable Monte Carlo convergence.
+
+In this project we instead adopt a \emph{pathwise survival weighting} approach.
+Rather than simulating default times, each Monte Carlo path produces a
+\emph{forward hazard surface}
+\[
+\gamma_{i,j} := \widehat{\gamma}(t_i, t_j),
+\qquad j \ge i,
+\]
+from which a full pathwise survival curve is constructed.
+
+Given the forward hazards at simulation time $t_i$, the model-implied survival
+from $t_i$ to $t_j$ is
+\[
+S(t_i, t_j)
+    = \exp\!\left(
+        - \sum_{\ell=i}^{j-1}
+           \gamma_{i,l}\,\Delta t_\ell
+      \right).
+\]
+
+This expression is evaluated \emph{on every path}. Consequently:
+
+\begin{itemize}
+    \item No default time is drawn.
+    \item No cashflow is ever forcibly set to zero.
+    \item All valuation is performed under smooth, differentiable
+          survival weights $S(t_i,t_j)\in(0,1]$.
+\end{itemize}
+
+For each Monte Carlo path $p$, the contribution of a cashflow $c_j$ payable at
+$t_j$ is
+\[
+\mathrm{PV}^{(p)}(c_j)
+    = D(0,t_j)\,c_j\,S^{(p)}(t_i, t_j).
+\]
+Averaging over paths yields an unbiased Monte Carlo estimator of the true
+reduced-form value. As we will see later, this smooth
+treatment of survival probability is essential for structured CLN features,
+ensuring stable simulation behaviour and eliminating numerical discontinuities.
+
+
+% =======================================================================
+% 3.8  From Forward Hazards to Instantaneous Hazard and Model CDS Levels
+% =======================================================================
+
+\subsection{From Forward Hazards to Instantaneous Hazard and Model CDS Levels}
+
+As described in the previous chapter, the HJM hazard model evolves the \emph{forward hazard surface}
+$\gamma(t,T)$ across simulation time. The instantaneous hazard rate at
+time $t_i$ is obtained from the diagonal of this surface,
+\[
+h_i = \gamma_{i,i}.
+\]
+This instantaneous intensity determines the short-term default risk on
+each Monte Carlo path.
+
+For exotic credit-linked notes, coupons or
+embedded options are often linked to the prevailing level of credit
+risk, typically expressed in terms of a CDS spread. In a full
+market-accurate implementation, the par CDS spread would be computed
+using protection and premium leg present values, accounting for
+discounting, accrual on default, payment conventions, and the term
+structure of survival probabilities.
+
+Such detail is unnecessary for the numerical experiments in this
+tutorial. Instead, the \emph{model CDS spread} at time $t_i$ is defined
+pathwise by
+\[
+s_i := (1 - R)\,h_i = (1 - R)\,\gamma_{i,i}.
+\]
+
+This quantity serves as the credit-risk state variable inside CLN
+payoffs. All CDS-linked features are evaluated using
+$s_i$. Since $h_i$ depends smoothly on the evolved forward hazards, the
+resulting model CDS level reacts smoothly to volatility and curve
+shifts, ensuring stable Monte Carlo behaviour.
+
+\subsubsection*{Remark on Modelling Choice}
+
+This simplified approach is appropriate here because the focus of the
+tutorial is on the Monte Carlo implementation of the HJM hazard model,
+rather than on exact replication of market CDS conventions. Should a
+more realistic CDS calibration be required, the same forward-hazard
+paths may be used to compute par spreads using full survival-based
+leg valuations. That extension is conceptually straightforward but adds
+substantial notational overhead without affecting the numerical
+principles developed in this section.
+
+
+\subsection{Exotic Range--Accrual CLN Payoff}
+
+This section introduces the exotic payoff used throughout Chapter~4 to illustrate
+variance--reduction methods. The product is a range--accrual credit--linked note
+in which the final redemption amount is scaled by the proportion of
+coupon--observation dates on which the model--implied CDS spread stays inside a
+fixed corridor. The structure preserves the standard coupon, recovery, and
+redemption legs of a risky bond while introducing controlled path dependence.
+
+Let $t_1,\dots,t_N$ denote the coupon observation dates. Along each simulated
+hazard--rate path, the HJM model produces a model--implied CDS spread $s(t_i)$.
+Fix a corridor $[L,U]$ and define
+\[
+I_i = 1\{L \le s(t_i) \le U\},
+\qquad
+A = \frac{1}{N}\sum_{i=1}^N I_i.
+\]
+The factor $A$ measures the fraction of times the spread remains within the
+corridor. At maturity, the notional is scaled by this factor, producing a smooth
+and intuitive form of path dependency.
+
+Let $D(0,t)$ and $S(0,t)$ denote the pathwise discount factor and pathwise
+survival probability along the simulated hazard--rate path.
+
+\subsubsection*{Coupon Leg}
+
+The coupon leg follows the standard reduced--form representation:
+\[
+\text{CouponLeg}
+= \sum_{i=1}^N c\, D(0,t_i)\, S(0,t_i),
+\]
+where $c$ is the contractual coupon. No exotic modification is applied to this
+component.
+
+\subsubsection*{Recovery Leg}
+
+In reduced--form credit models, default can occur at any time, and its timing is
+governed by the hazard rate $h(t)$. The key quantity is the \emph{default
+density},
+\[
+h(t)\, S(0,t)\, dt,
+\]
+which represents the probability of default in the small interval around $t$.
+Multiplying this by the recovery amount $R$ and the discount factor $D(0,t)$
+gives the time--$t$ contribution of recovery to the overall price. In continuous
+time, the recovery leg is
+\[
+\text{RecoveryLeg}
+= R \int_0^T D(0,t)\, h(t) S(0,t)\, dt.
+\]
+
+For implementation, this integral is approximated on the same grid used for
+coupon dates and survival simulation. This maintains conceptual clarity, avoids
+the need for finer quadrature, and is adequate for the pedagogical and
+variance--reduction focus of this project.
+
+A convenient discrete approximation, which avoids evaluating $h(t)$ directly,
+uses the identity
+\[
+h(u_j)\, S(0,u_j)\, \Delta u_j
+\approx S(0,u_{j-1}) - S(0,u_j),
+\]
+expressing default over the interval $[u_{j-1},u_j]$ purely in terms of survival
+probabilities. On the grid $0 = u_0 < u_1 < \dots < u_N = T$, the recovery leg
+is therefore
+\[
+\text{RecoveryLeg}
+= R \sum_{j=1}^{N} D(0,u_j)\, \bigl(S(0,u_{j-1}) - S(0,u_j)\bigr).
+\]
+
+\subsubsection*{Redemption Leg}
+
+Only the redemption amount is affected by the range--accrual feature. Instead of
+paying the full notional at maturity, the product pays
+\[
+\text{RedemptionLeg}
+= A \cdot \mathrm{Notional} \cdot D(0,T)\, S(0,T).
+\]
+If the CDS spread is always inside the corridor, $A = 1$ and the standard CLN
+redemption is recovered; if it spends significant time outside the corridor, the
+redemption amount is proportionally reduced.
+
+\subsubsection*{Full Exotic Payoff}
+
+Combining all components, the payoff for a single Monte Carlo path is
+\[
+\text{Payoff}
+= \text{CouponLeg}
++ \text{RecoveryLeg}
++ \text{RedemptionLeg}.
+\]
+
+This formulation maintains the classical risky--bond decomposition while
+introducing a smooth and interpretable path--dependent element. Because the
+exotic modification interacts closely with the vanilla CLN structure but varies
+nonlinearly with spread dynamics, it serves as an ideal payoff for demonstrating
+the effect of common random numbers, control variates, and antithetic variates.
+
+This completes the numerical cookbook for the HJM hazard model. The next section will discuss variance reduction 
+techniques in detail. 

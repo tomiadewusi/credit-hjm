@@ -1,0 +1,66 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{csquotes}
+\usepackage{float}
+% \usepackage[numbers,sort&compress]{natbib}
+
+% TikZ and PGFPlots packages
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% Load 3D plotting libraries
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{decorations.markings}
+\usetikzlibrary{calc}
+\usetikzlibrary{positioning}
+
+% PGFPlots 3D surface library
+\usepgfplotslibrary{colormaps}
+\usepgfplotslibrary{patchplots}
+
+% === tcolorbox for sidebars, intuition boxes, etc. ===
+\usepackage{tcolorbox}
+\tcbuselibrary{breakable}      % allow boxes to split across pages
+\tcbuselibrary{skins}          % cleaner styling options
+\tcbuselibrary{theorems}       % if you later want theorem-like boxes
+
+
+
+\title{Variance Reduction for Monte Carlo Pricing of Credit Derivatives}
+\author{Olatomiwa Adewusi, Group 145 (Solo)}
+\date{December 3, 2025}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+
+\begin{abstract}
+This project investigates Monte Carlo variance reduction techniques in the context of credit derivatives, using stochastic hazard rates under an HJM framework and a range–accrual credit–linked note (CLN) as the test payoff. The goal is to build a clear and reproducible numerical pipeline that prices credit products under a dynamic term structure and evaluates how common variance reduction tools perform when applied to structured credit payoffs.
+
+The work begins by constructing deterministic short rate and hazard curves, then embedding these curves inside a discrete HJM hazard model that produces arbitrage–free forward hazard surfaces. A smooth pathwise survival approach is used instead of explicit default simulation, which stabilises Monte Carlo convergence for path–dependent credit products. The exotic CLN payoff is coded in this framework and used to test the effectiveness of antithetic variates and control variates.
+
+Results show that the simulation engine correctly reprices the initial term structures and produces stable Monte Carlo estimates for both investment grade and high yield names. Antithetic variates consistently provide strong variance reduction, while the control variate gives only modest improvement due to weaker realised correlation with the exotic payoff. Overall, the project demonstrates that simple variance reduction tools can materially improve efficiency when pricing structured credit products by simulation.
+\end{abstract}
+
+
+
+
+% Option A: use \input so we don't create per-section .aux in build/
+\input{sections/introduction-body}
+\input{sections/credit-model-setup-body}
+\input{sections/monte-carlo-simulation-framework-body}
+\input{sections/variance-reduction.tex}
+\input{sections/numerical-experiments-and-results-body}
+\input{sections/conclusion-body}
+
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+\end{document}
+
+

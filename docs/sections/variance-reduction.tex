@@ -1,0 +1,215 @@
+\section{Variance Reduction Techniques for Credit-Linked Notes}
+
+\paragraph{Note on Sources.}
+The variance-reduction techniques implemented in this section are drawn from 
+\cite{lawKelton2015} \textit{Simulation Modeling and Analysis} (6th ed.), 
+specifically Chapter~11.  
+The organisation of methods, the logic behind the estimators, 
+and much of the conceptual flow follow Law. The notation modified to align with the credit context of this project.
+
+This section introduces three core variance--reduction techniques used to
+improve Monte Carlo efficiency when valuing credit--linked notes (CLNs) under
+stochastic hazard--rate dynamics: common random numbers, control variates, and
+antithetic variates. CLN valuation ultimately reduces to estimating expectations
+of functionals of the hazard--rate process. As the complexity of the payoff
+increases, particularly for exotic and path--dependent credit products, naive
+Monte Carlo becomes inefficient. Variance--reduction techniques are therefore an
+essential component of any practical simulation engine.
+
+The techniques discussed here build on the Monte Carlo framework and
+hazard--rate simulation machinery developed in sections 2 and 3. Throughout, we
+rely on consistent notation, explicit derivations, and examples tailored
+specifically to credit products. In particular, the final section illustrates how
+each method applies to the pricing of a range--accrual exotic CLN whose
+redemption amount depends on the fraction of coupon--observation dates at which
+the model--implied CDS spread lies within a predefined corridor.
+
+\subsection{Background on Monte Carlo Estimation}
+
+Monte Carlo methods provide numerical estimates of expectations of the form
+\[
+\mathbb{E}[H],
+\]
+where $H$ is a random payoff functional driven by simulated hazard--rate paths
+and credit spreads. By drawing independent samples $H_1,\dots,H_N$, the Monte
+Carlo estimator is
+\[
+\hat{H}_N = \frac{1}{N}\sum_{j=1}^N H_j.
+\]
+The law of large numbers ensures $\hat{H}_N \to \mathbb{E}[H]$ almost surely as
+$N\to\infty$.
+
+More importantly, the central limit theorem states that
+\[
+\sqrt{N}(\hat{H}_N - \mathbb{E}[H])
+\]
+converges in distribution to a normal with mean zero and variance
+$\mathrm{Var}(H)$. The standard error is therefore
+\[
+SE(\hat{H}_N) = \sqrt{\frac{\mathrm{Var}(H)}{N}}.
+\]
+This highlights the inefficiency of naive Monte Carlo: halving the standard
+error requires quadrupling the number of simulations. Because many credit
+payoffs are path--dependent and driven by stochastic term structures,
+efficient variance--reduction is critical.
+
+Variance--reduction techniques work by replacing $\hat{H}_N$ with an
+alternative estimator that is still unbiased but has a smaller variance. The
+remainder of this section develops three such techniques in detail.
+
+\subsection{Common Random Numbers}
+
+Common random numbers (CRNs), also known as correlated sampling, are used when
+comparing two system configurations. In our setting, we compare two payoffs
+computed under identical simulation noise but different model inputs or payoff
+structures. For example, a vanilla CLN and an exotic range--accrual CLN may be
+evaluated using the same underlying Gaussian shocks driving the hazard--rate
+process.
+
+\subsubsection*{Setup}
+
+Let $X_j^{(1)}$ and $X_j^{(2)}$ be the discounted payoffs for the two
+configurations for simulation $j$, constructed using identical random numbers.
+Define
+\[
+Z_j = X_j^{(1)} - X_j^{(2)}.
+\]
+The quantity of interest is the difference in means
+\[
+\phi = \mathbb{E}[Z_j] = \mathbb{E}[X^{(1)}] - \mathbb{E}[X^{(2)}].
+\]
+
+The CRN estimator is
+\[
+\tilde{\phi}_N = \frac{1}{N}\sum_{j=1}^N Z_j.
+\]
+This estimator is unbiased for $\phi$.
+
+\subsubsection*{Variance Derivation}
+
+We compute its variance explicitly:
+\[
+\mathrm{Var}(\tilde{\phi}_N)
+= \frac{1}{N} \mathrm{Var}(Z_j).
+\]
+Expanding $\mathrm{Var}(Z_j)$:
+\[
+\mathrm{Var}(Z_j)
+= \mathrm{Var}(X_j^{(1)}) + \mathrm{Var}(X_j^{(2)})
+- 2\,\mathrm{Cov}(X_j^{(1)}, X_j^{(2)}).
+\]
+
+If independent random numbers were used, $\mathrm{Cov}=0$. Under CRNs, the
+covariance is typically positive because both payoffs are driven by the same
+hazard--rate shocks and payoff structures are similar. A positive covariance
+reduces $\mathrm{Var}(Z_j)$ and therefore reduces the variance of
+$\tilde{\phi}_N$.
+
+CRNs are heuristic. There is no guarantee that the covariance is positive.
+Poorly matched payoffs can increase variance. In practice, CRNs work best when
+comparing structurally similar payoffs. By design, our vanilla CLN will be an 
+excellent control variate for our exotic CLN. 
+
+\subsection{Control Variates}
+
+Control variates (CVs) are among the most powerful variance--reduction
+techniques. The method requires a random variable $C$ whose expectation
+$\mathbb{E}[C]$ is known analytically and which is strongly correlated with the
+target payoff $Y$.
+
+In credit applications, a natural choice is to let
+\begin{itemize}
+\item $Y$ be the discounted payoff of an exotic CLN,
+\item $C$ be the discounted payoff of a vanilla CLN,
+\end{itemize}
+whose analytical price is available.
+
+\subsubsection*{Derivation}
+
+Consider the adjusted estimator
+\[
+\tilde{Y}_N = \hat{Y}_N - \beta(\hat{C}_N - \mathbb{E}[C]),
+\]
+where
+\[
+\hat{Y}_N = \frac{1}{N}\sum_{j=1}^N Y_j,
+\qquad
+\hat{C}_N = \frac{1}{N}\sum_{j=1}^N C_j.
+\]
+
+This estimator is unbiased regardless of $\beta$. Its variance is
+\[
+\mathrm{Var}(\tilde{Y}_N)
+= \frac{1}{N}\left(
+\mathrm{Var}(Y) + \beta^2 \mathrm{Var}(C)
+- 2\beta\,\mathrm{Cov}(Y,C)
+\right).
+\]
+
+Differentiating with respect to $\beta$ gives the optimal coefficient:
+\[
+\beta^*
+= \frac{\mathrm{Cov}(Y,C)}{\mathrm{Var}(C)}.
+\]
+
+Substituting back yields
+\[
+\mathrm{Var}(\tilde{Y}_N)
+= \frac{1}{N}
+\left[
+\mathrm{Var}(Y)\,\bigl(1 - \rho_{Y,C}^2\bigr)
+\right],
+\]
+where $\rho_{Y,C}$ is the correlation between $Y$ and $C$. Variance is reduced
+in proportion to the squared correlation.
+
+\subsection{Antithetic Variates}
+
+Antithetic variates use negatively correlated pairs to reduce variance. If $Z$
+is a standard normal driving the hazard--rate increment, consider the pair
+$(Z, -Z)$. Let the corresponding payoffs be $H(Z)$ and $H(-Z)$.
+
+The antithetic estimator is
+\[
+\tilde{H}_j = \frac{1}{2}\bigl( H(Z_j) + H(-Z_j) \bigr),
+\qquad
+\hat{H}_N = \frac{1}{N}\sum_{j=1}^N \tilde{H}_j.
+\]
+
+Explicitly computing the variance:
+\[
+\mathrm{Var}(\tilde{H}_j)
+= \frac{1}{4}\left(
+\mathrm{Var}(H(Z)) + \mathrm{Var}(H(-Z))
++ 2\,\mathrm{Cov}(H(Z),H(-Z))
+\right).
+\]
+Because $H(Z)$ and $H(-Z)$ often move in opposite directions for monotone
+payoffs, the covariance is frequently negative, reducing variance. As with
+CRNs, this is not guaranteed; highly nonlinear payoffs may yield little or no
+benefit.
+
+\subsection{Application to Exotic CLNs}
+
+We now apply these techniques to the exotic range--accrual CLN whose payoff
+depends on how often the model--implied CDS spread lies within a corridor
+$[L,U]$ over the coupon observation dates.
+
+\paragraph{Control Variates.}
+Let $Y$ be the discounted payoff of the exotic CLN, and let $C$ be the
+discounted payoff of a vanilla CLN with the same notional, maturity, and
+recovery rate. Because the exotic structure modifies redemption by a fractional
+factor depending on spread behaviour, the correlation between $Y$ and $C$ is
+naturally high. Control variates therefore yield strong variance reduction.
+
+\paragraph{Enhancing Control Variates Using Common Random Numbers.}
+A further improvement is obtained by coupling $Y$ and $C$ via identical random
+numbers. This ensures that the two payoffs react to the same hazard--rate
+shocks and CDS--spread paths. CRNs increase the correlation between $Y$ and $C$
+and therefore increase the effectiveness of the control variate.
+
+\paragraph{Antithetic Variates.}
+Antithetic variates can be applied at the driver level: for each simulation
+$j$, generate hazard--rate shocks using $Z_j$ and $-Z_j$. Compute exotic CLN
+payoffs for both and average them. In the next section we will see if the negatively
+correlated pair of random variables leads to a meaningful variance reduction. 
