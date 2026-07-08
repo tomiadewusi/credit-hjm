@@ -1,8 +1,14 @@
-#simulate_paths.py
-# Pathwise Monte Carlo implementation with bounded memory usage.
+"""Pathwise Monte Carlo pricing for vanilla and range-accrual CLNs.
+
+The module uses a deterministic discount curve, deterministic initial survival
+curves, and a simplified HJM-style stochastic evolution for forward hazard
+rates. The simulation grid is semiannual over a three-year horizon, so coupon
+dates coincide with grid points after t = 0.
+"""
+
 import numpy as np
 
-# 6m increments, 3y total time
+# Semiannual increments over a three-year horizon.
 deltat = 6 / 12
 startTime = 0.0
 endTime = 3.0
@@ -72,6 +78,11 @@ ForwardHazardsHY = -np.log(survivalProbsHY[1:] / survivalProbsHY[:-1]) / deltat
 
 
 def vanilla_cln_analytical(S0_function, D0_function, ti, Notional, couponRate, RecoveryRate):
+    """Return the deterministic-curve value of a vanilla credit-linked note.
+
+    Coupons and recovery payments are evaluated on the supplied time grid. The
+    redemption leg is paid at maturity conditional on survival.
+    """
 
     # Survival and discount curves on the grid
     survivals = S0_function(ti)       
@@ -96,13 +107,26 @@ pvAnalyticalVanillaHY = vanilla_cln_analytical(S0_hy, D0, ti, Notional, couponRa
 pvAnalyticalVanillaIG = vanilla_cln_analytical(S0_ig, D0, ti, Notional, couponRate, RecoveryRate)
 
 def simulatePaths(normalVariates, useRangeAccrual):
+    """Simulate pathwise CLN present values for IG and HY hazard curves.
+
+    Parameters
+    ----------
+    normalVariates : ndarray
+        Standard normal shocks with shape ``(n_paths, M)``, where ``M`` is the
+        number of semiannual forward-hazard intervals.
+    useRangeAccrual : bool
+        If True, scale redemption by the fraction of periods in which the
+        implied credit spread lies inside the range-accrual band. If False,
+        value the vanilla CLN payoff under the same simulated hazard dynamics.
+    """
     n,_ = normalVariates.shape
 
-    # Range accrual condition
+    # Range-accrual spread band, expressed in decimal spread units.
     upperBarrier = 150 / 10_000
     lowerBarrier = 0.0
 
-    # Number of semiannual hazard intervals on the simulation grid.
+    # Number of semiannual hazard intervals on the simulation grid. With the
+    # current 0y-to-3y semiannual grid this is six.
     M = len(ForwardHazardsHY)
 
     sigma_hat_ig = lambda t1, t2: sigma_h_ig * np.exp(-c_h_ig * (t2 - t1))
@@ -143,11 +167,11 @@ def simulatePaths(normalVariates, useRangeAccrual):
             hazardIG = FWD_IG[ix]
             hazardHY = FWD_HY[ix]
 
-            # clip the hazards to prevent negative spreads
+            # Clip hazards when converting to spreads for the range test.
             spreadIG = max(hazardIG, 0.0) * (1.0 - RecoveryRate)
             spreadHY = max(hazardHY, 0.0) * (1.0 - RecoveryRate)
 
-            # Range accrual condition
+            # Count periods that satisfy the range-accrual condition.
             if useRangeAccrual:
                 if lowerBarrier <= spreadIG < upperBarrier:
                     rangeCountIG += 1
@@ -164,7 +188,7 @@ def simulatePaths(normalVariates, useRangeAccrual):
             survIG = accumHazardIG
             survHY = accumHazardHY
 
-            # Every period after t=0 has a coupon since the grid aligns with the schedule
+            # The coupon schedule aligns with each grid point after t = 0.
             
             # Discount factors are defined at the start of the interval
             # D(ix) = 1 when ix = 0 i.e. D(0) is discount at today
@@ -181,7 +205,7 @@ def simulatePaths(normalVariates, useRangeAccrual):
             prevSurvIG = survIG
             prevSurvHY = survHY
 
-            # This is the forward curve evolution part
+            # HJM-style forward hazard evolution for the remaining curve.
             if ix < M - 1:
                 ti_min1 = ti[ix]
                 tj = ti[ix + 1:-1]
