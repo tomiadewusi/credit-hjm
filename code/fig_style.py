@@ -1,7 +1,5 @@
 # fig_style.py
-# This code was created with the assistance of ChatCPT. 
-# I wanted to get IEEE style graphs and it helped me get
-# everything in the correct format
+# Matplotlib helpers for report-style grayscale figures.
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt

@@ -26,7 +26,7 @@ hjm_example_ram_safe.ipynb
 - Memory-safe pathwise implementation of the HJM hazard-rate model.
 - Evolves forward intensities on a coarse grid.
 - Generates survival probabilities, discount factors, and CLN cashflows.
-- Avoids RAM issues seen in vectorised versions.
+- Uses a pathwise implementation to keep memory usage bounded.
 
 hjm_example_vectorised.ipynb
 - Vectorised implementation of the same hazard-rate evolution.
@@ -72,7 +72,6 @@ term-structures-2x2.pdf
 5. Notes
 -------------------------------------------------------------------------------
 
-- The project used ChatGPT extensively for figure design and code cleanup.
 - Figures in the PDF files were generated through the notebooks using fig_style.py.
 - Future extensions include re-writing the full simulation engine in JAX for GPU execution and adding importance sampling to the variance-reduction set.
 -------------------------------------------------------------------------------

@@ -1,6 +1,5 @@
 #simulate_paths.py
-# Pathwise version 
-# This doesn't blow up my RAM
+# Pathwise Monte Carlo implementation with bounded memory usage.
 import numpy as np
 
 # 6m increments, 3y total time
@@ -97,15 +96,13 @@ pvAnalyticalVanillaHY = vanilla_cln_analytical(S0_hy, D0, ti, Notional, couponRa
 pvAnalyticalVanillaIG = vanilla_cln_analytical(S0_ig, D0, ti, Notional, couponRate, RecoveryRate)
 
 def simulatePaths(normalVariates, useRangeAccrual):
-    # just remember that M is always going to be six. 
-    # too lazy to do something fancy
     n,_ = normalVariates.shape
 
     # Range accrual condition
     upperBarrier = 150 / 10_000
     lowerBarrier = 0.0
 
-    # this kinda bad but functions can see outside their scope 
+    # Number of semiannual hazard intervals on the simulation grid.
     M = len(ForwardHazardsHY)
 
     sigma_hat_ig = lambda t1, t2: sigma_h_ig * np.exp(-c_h_ig * (t2 - t1))
@@ -122,10 +119,8 @@ def simulatePaths(normalVariates, useRangeAccrual):
         FWD_IG = ForwardHazardsIG + 0
         FWD_HY = ForwardHazardsHY + 0
 
-        # FWD changes on every iteration =  need a fresh array for each path. 
-        # Adding zero forces NumPy to allocate new memory. 
-        # Looks weird, but it works. 
-        # Lowkey so I don't forget when I reimplemnt this in JAX
+        # Each path evolves its own copy of the forward hazard curve.
+        # Adding zero forces NumPy to allocate a fresh array.
 
         accumHazardIG = 1.0
         accumHazardHY = 1.0
@@ -133,7 +128,7 @@ def simulatePaths(normalVariates, useRangeAccrual):
         rangeCountIG = 0
         rangeCountHY = 0
 
-        # you get a coupon at everytime point save the t0 = now
+        # Coupons are paid at each grid point after t = 0.
         couponPV_IG = 0.0
         couponPV_HY = 0.0
         recoveryPV_IG = 0.0
@@ -144,7 +139,7 @@ def simulatePaths(normalVariates, useRangeAccrual):
 
         for ix in range(M):
 
-            # Note that the diagonals of you forward curve matrix are the your instaneous hazard rates 
+            # The diagonal entries of the forward curve are the instantaneous hazard rates.
             hazardIG = FWD_IG[ix]
             hazardHY = FWD_HY[ix]
 
@@ -159,8 +154,7 @@ def simulatePaths(normalVariates, useRangeAccrual):
                 if lowerBarrier <= spreadHY < upperBarrier:
                     rangeCountHY += 1
             else: 
-                # in the vanilla case you always add the counter
-                # the ratio will be 1
+                # In the vanilla case the accrual fraction is always 1.
                 rangeCountIG += 1
                 rangeCountHY += 1
 
@@ -174,13 +168,13 @@ def simulatePaths(normalVariates, useRangeAccrual):
             
             # Discount factors are defined at the start of the interval
             # D(ix) = 1 when ix = 0 i.e. D(0) is discount at today
-            # hence we shift ix by one everything one
+            # Hence each cash-flow index is shifted by one grid point.
             couponPV_IG += Notional * couponRate * DiscountFactors[ix+1] * survIG
             couponPV_HY += Notional * couponRate * DiscountFactors[ix+1] * survHY
 
             # Recovery leg
             # shift ix by one, same reason as for coupons
-            # see glasserman if confused
+            # Recovery is paid on the interval default probability.
             recoveryPV_IG += Notional * RecoveryRate * DiscountFactors[ix+1] * (prevSurvIG - survIG)
             recoveryPV_HY += Notional * RecoveryRate * DiscountFactors[ix+1] * (prevSurvHY - survHY)
 
@@ -218,4 +212,3 @@ def simulatePaths(normalVariates, useRangeAccrual):
 
     return PV_paths_IG, PV_paths_HY, pvAnalyticalVanillaIG, pvAnalyticalVanillaHY
    
-
